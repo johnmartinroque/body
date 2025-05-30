@@ -1,4 +1,3 @@
-
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
@@ -6,8 +5,8 @@ from sklearn.metrics import classification_report
 import joblib
 
 # Load data
-data = pd.read_csv('emotion_data.csv', header=None)
-X = data.iloc[:, :-1]
+data = pd.read_csv('gesture_data.csv', header=None)
+X = data.iloc[:, :-1].fillna(0)  # fill missing values
 y = data.iloc[:, -1]
 
 # Split
@@ -22,4 +21,4 @@ y_pred = model.predict(X_test)
 print(classification_report(y_test, y_pred))
 
 # Save model
-joblib.dump(model, 'emotion_classifier.pkl')
+joblib.dump(model, 'gesture_classifier.pkl')

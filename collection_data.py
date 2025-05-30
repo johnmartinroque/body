@@ -3,46 +3,55 @@ import mediapipe as mp
 import csv
 import numpy as np
 
-mp_face = mp.solutions.face_mesh
-face_mesh = mp_face.FaceMesh(static_image_mode=False, max_num_faces=1)
+mp_drawing = mp.solutions.drawing_utils
+mp_holistic = mp.solutions.holistic
+
+# Initialize holistic model
+holistic = mp_holistic.Holistic(static_image_mode=False, min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
 cap = cv2.VideoCapture(0)
 
 # Open CSV to save data
-csv_file = open('emotion_data.csv', mode='w', newline='')
+csv_file = open('gesture_data.csv', mode='w', newline='')
 csv_writer = csv.writer(csv_file)
 
-print("Press 'h' for Happy, 's' for Sad, 'u' for sUrprised. Press 'q' to quit.")
+print("Press '1', '2', or '3' to label gestures. Press 'q' to quit.")
 
 while True:
     ret, frame = cap.read()
     image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    results = face_mesh.process(image_rgb)
+    results = holistic.process(image_rgb)
 
-    if results.multi_face_landmarks:
-        for face_landmarks in results.multi_face_landmarks:
-            landmarks = []
-            for lm in face_landmarks.landmark:
-                landmarks.extend([lm.x, lm.y])  # Only use x and y for simplicity
+    landmarks = []
 
-            # Draw landmarks on screen
-            for lm in face_landmarks.landmark:
-                h, w, _ = frame.shape
-                cx, cy = int(lm.x * w), int(lm.y * h)
-                cv2.circle(frame, (cx, cy), 1, (0, 255, 0), -1)
+    # Collect landmarks: pose + left/right hands
+    if results.pose_landmarks:
+        for lm in results.pose_landmarks.landmark:
+            landmarks.extend([lm.x, lm.y])
+    if results.left_hand_landmarks:
+        for lm in results.left_hand_landmarks.landmark:
+            landmarks.extend([lm.x, lm.y])
+    if results.right_hand_landmarks:
+        for lm in results.right_hand_landmarks.landmark:
+            landmarks.extend([lm.x, lm.y])
 
-    cv2.imshow('Collecting Data', frame)
+    # Draw landmarks
+    mp_drawing.draw_landmarks(frame, results.pose_landmarks, mp_holistic.POSE_CONNECTIONS)
+    mp_drawing.draw_landmarks(frame, results.left_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
+    mp_drawing.draw_landmarks(frame, results.right_hand_landmarks, mp_holistic.HAND_CONNECTIONS)
+
+    cv2.imshow('Collecting Gesture Data', frame)
 
     key = cv2.waitKey(1) & 0xFF
-    if key == ord('h') and results.multi_face_landmarks:
-        csv_writer.writerow(landmarks + ['happy'])
-        print("Saved: happy")
-    elif key == ord('s') and results.multi_face_landmarks:
-        csv_writer.writerow(landmarks + ['sad'])
-        print("Saved: sad")
-    elif key == ord('u') and results.multi_face_landmarks:
-        csv_writer.writerow(landmarks + ['surprised'])
-        print("Saved: surprised")
+    if key == ord('1') and landmarks:
+        csv_writer.writerow(landmarks + ['gesture1'])
+        print("Saved: gesture1")
+    elif key == ord('2') and landmarks:
+        csv_writer.writerow(landmarks + ['gesture2'])
+        print("Saved: gesture2")
+    elif key == ord('3') and landmarks:
+        csv_writer.writerow(landmarks + ['gesture3'])
+        print("Saved: gesture3")
     elif key == ord('q'):
         break
 
